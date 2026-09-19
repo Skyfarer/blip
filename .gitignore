@@ -1,0 +1,7 @@
+__pycache__/
+state.json
+state.json.tmp
+lib/
+fonts/
+out/
+.DS_Store

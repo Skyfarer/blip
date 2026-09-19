@@ -1,0 +1,14 @@
+[Unit]
+Description=Blip, the Bluetooth-eating e-ink pet
+After=bluetooth.service
+Wants=bluetooth.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/blip
+ExecStart=/usr/bin/python3 /home/pi/blip/blip.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
