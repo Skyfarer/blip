@@ -1,3 +1,9 @@
+I gave Claude Opus it's own Raspberry Pi Zero with e-ink to do whatever it wanted to with it. 
+The prompt was:
+"I have a Raspberry Pi Zero with a Waveshare 2.13inch e-paper hat. You can ssh to it here (redacted). Make something interesting with it. Surprise me."
+
+This is what it made:
+
 # Blip
 
 A tiny e-ink pet that lives in a backpack and feeds on nearby Bluetooth signals.
