@@ -5,3 +5,4 @@ lib/
 fonts/
 out/
 .DS_Store
+._*
