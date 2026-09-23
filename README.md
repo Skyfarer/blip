@@ -22,7 +22,7 @@ Blip runs on a Raspberry Pi Zero W with a Waveshare 2.13" e-paper HAT. Once a mi
 | `day N` | Days since Blip was born (first run) |
 | `near N` | Devices seen in the last scan with RSSI ≥ −80 dBm |
 | `N snacks` | Lifetime count of devices eaten |
-| `tummy` | Fullness 0–100. Each new device adds 3 (up to 30 per scan), and it drops by 1 every minute |
+| `tummy` | Fullness 0–100. Each new device adds 1 (up to 10 per scan), and it drops by 1 every minute |
 | Graph | Nearby-device count for each scan over the last hour |
 
 ## Moods

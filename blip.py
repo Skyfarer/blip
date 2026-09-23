@@ -322,7 +322,7 @@ def main():
                 new += 1
         state["total_eaten"] += new
         state["eaten_today"] += new
-        state["fullness"] = max(0, min(100, state["fullness"] - 1 + min(new, 10) * 3))
+        state["fullness"] = max(0, min(100, state["fullness"] - 1 + min(new, 10)))
         state["history"] = (state["history"] + [nearby])[-HISTORY_LEN:]
 
         mood = pick_mood(nearby, new, state["fullness"])
