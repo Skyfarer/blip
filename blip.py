@@ -22,6 +22,7 @@ NEAR_RSSI = -80
 CYCLE_SECONDS = 60
 FULL_REFRESH_EVERY = 20
 HISTORY_LEN = 60
+EATEN_TTL = 24 * 3600  # seconds before an eaten hash is forgotten
 
 log = logging.getLogger("blip")
 
@@ -201,10 +202,19 @@ def render(state, mood, quip, frame, nearby):
 def load_state():
     try:
         with open(STATE_PATH) as f:
-            return json.load(f)
+            state = json.load(f)
     except (OSError, ValueError):
-        return {"born": date.today().isoformat(), "total_eaten": 0, "fullness": 60,
-                "history": [], "day": date.today().isoformat(), "eaten_today": 0}
+        state = {"born": date.today().isoformat(), "total_eaten": 0, "fullness": 60,
+                  "history": [], "day": date.today().isoformat(), "eaten_today": 0}
+    # salt must persist across restarts (not per-run) so a beacon's hash stays
+    # stable and it can be recognized as already-eaten; addresses themselves
+    # are never stored, only the salted hash.
+    state.setdefault("salt", os.urandom(8).hex())
+    eaten = state.get("eaten", {})
+    if isinstance(eaten, list):  # older format: bare list of hashes, no timestamps
+        eaten = dict.fromkeys(eaten, time.time())
+    state["eaten"] = eaten
+    return state
 
 
 def save_state(state):
@@ -219,7 +229,8 @@ def scan():
     # btmgmt exits immediately if stdin hits EOF (as under systemd), so hold a pipe open
     # until discovery finishes.
     proc = subprocess.Popen(["btmgmt", "--index", "0", "find", "-l"], stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                            errors="replace")  # device names can contain invalid UTF-8
     lines, deadline = [], time.monotonic() + 30
     for line in proc.stdout:
         lines.append(line)
@@ -277,8 +288,8 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     state = load_state()
     display = Display()
-    salt = os.urandom(8)  # addresses are hashed with a per-run salt and never written to disk
-    seen_today = set()
+    salt = bytes.fromhex(state["salt"])
+    eaten = state["eaten"]  # {hash: time eaten} for beacons already eaten, so they aren't snacked on twice
     frame = 0
 
     def stop(*_):
@@ -295,15 +306,19 @@ def main():
         today = date.today().isoformat()
         if state["day"] != today:
             state["day"], state["eaten_today"] = today, 0
-            seen_today.clear()
 
         found = scan()
         nearby = sum(1 for r in found.values() if r >= NEAR_RSSI)
         new = 0
+        now = time.time()
+        # most devices rotate their address every ~15 min, so old hashes will never
+        # match again; forget them after a day to keep state.json from growing forever
+        for h in [h for h, t in eaten.items() if now - t > EATEN_TTL]:
+            del eaten[h]
         for addr in found:
-            h = hashlib.sha1(salt + addr.encode()).digest()[:8]
-            if h not in seen_today:
-                seen_today.add(h)
+            h = hashlib.sha1(salt + addr.encode()).hexdigest()[:16]
+            if h not in eaten:
+                eaten[h] = now
                 new += 1
         state["total_eaten"] += new
         state["eaten_today"] += new
